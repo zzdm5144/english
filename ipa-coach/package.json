@@ -1,0 +1,17 @@
+{
+  "name": "ipa-coach",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Mobile-first English pronunciation training PWA with Azure pronunciation assessment",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "express": "^5.1.0",
+    "helmet": "^8.1.0"
+  }
+}
