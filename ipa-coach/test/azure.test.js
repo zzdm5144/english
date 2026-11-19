@@ -18,3 +18,27 @@ test('returns only real Azure assessment payload fields', async () => {
   assert.equal(result.source,'azure-pronunciation-assessment');
   assert.equal(result.pronunciationScore,91);
 });
+
+test('maps the current REST response shape with scores directly on NBest', async () => {
+  const fetchMock = async () => ({
+    ok: true,
+    json: async () => ({
+      RecognitionStatus: 'Success',
+      NBest: [{
+        Display: 'hello',
+        PronScore: 93,
+        AccuracyScore: 94,
+        FluencyScore: 90,
+        CompletenessScore: 100,
+        Words: [{ Word: 'hello', AccuracyScore: 94, ErrorType: 'None' }]
+      }]
+    })
+  });
+  const result = await createAzureClient(
+    { configured: true, key: 'secret', region: 'japaneast' },
+    fetchMock
+  ).assess({ referenceText: 'hello', audio: Buffer.from('RIFF') });
+  assert.equal(result.pronunciationScore, 93);
+  assert.equal(result.words[0].accuracyScore, 94);
+  assert.equal(result.words[0].errorType, 'None');
+});

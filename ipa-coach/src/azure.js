@@ -44,9 +44,12 @@ export function createAzureClient(config, fetchImpl = globalThis.fetch) {
       if (!response.ok) throw new Error(`Azure Speech returned ${response.status}.`);
       const body = await response.json();
       const best = body.NBest?.[0];
-      const pronunciation = best?.PronunciationAssessment;
+      // The short-audio REST API returns scores directly on an NBest entry.
+      // SDK-shaped responses wrap the same values in PronunciationAssessment.
+      const pronunciation = best?.PronunciationAssessment || best;
       if (!pronunciation || typeof pronunciation.PronScore !== 'number') {
-        throw new Error('Azure Speech did not return pronunciation assessment scores.');
+        const status = body.RecognitionStatus || 'Unknown';
+        throw new Error(`Azure Speech did not return pronunciation assessment scores (recognition status: ${status}).`);
       }
       return {
         source: 'azure-pronunciation-assessment',
@@ -55,12 +58,18 @@ export function createAzureClient(config, fetchImpl = globalThis.fetch) {
         accuracyScore: pronunciation.AccuracyScore,
         fluencyScore: pronunciation.FluencyScore,
         completenessScore: pronunciation.CompletenessScore,
-        words: (best.Words || []).map(word => ({
-          word: word.Word,
-          accuracyScore: word.PronunciationAssessment?.AccuracyScore,
-          errorType: word.PronunciationAssessment?.ErrorType,
-          phonemes: (word.Phonemes || []).map(p => ({ phoneme: p.Phoneme, accuracyScore: p.PronunciationAssessment?.AccuracyScore }))
-        }))
+        words: (best.Words || []).map(word => {
+          const wordAssessment = word.PronunciationAssessment || word;
+          return {
+            word: word.Word,
+            accuracyScore: wordAssessment.AccuracyScore,
+            errorType: wordAssessment.ErrorType,
+            phonemes: (word.Phonemes || []).map(p => ({
+              phoneme: p.Phoneme,
+              accuracyScore: (p.PronunciationAssessment || p).AccuracyScore
+            }))
+          };
+        })
       };
     }
   };
